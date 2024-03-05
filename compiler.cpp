@@ -39,3 +39,10 @@ std::string removeCommentsAndExcessSpaces(const std::string& line) {
     bool commentStarted = false;
     
 }
+
+void printTokens(const std::vector<Token>& tokens) {
+    std::cout << "Tokens: " << std::endl;
+    for (const auto& token : tokens) {
+        std::cout << token.value << "\t\t" << token.type << std::endl;
+    }
+}
