@@ -17,6 +17,7 @@ std::string removeCommentsAndExcessSpaces(const std::string& line);
 std::vector<Token> tokenize(const std::string& code);
 void printCode(const std::vector<std::string>& lines);
 void printTokens(const std::vector<Token>& tokens);
+bool isKeyword(const std::string word);
 
 // Token struct to hold the value and type of each token
 struct Token {
@@ -80,7 +81,7 @@ std::vector<Token> tokenize(const std::string& code) {
     std::vector<Token> tokens;
 
     // Adjusted regular expressions
-    std::regex keywordRegex("\\b(int|return|if|else|for)\\b");
+    // std::regex keywordRegex("\\b(int|return|if|else|for)\\b");
     std::regex identifierRegex("\\b[a-zA-Z_][a-zA-Z0-9_]*\\b");
     std::regex literalRegex("\\b\\d+\\b"); // Numeric literals
     std::regex stringLiteralRegex("\"[^\"]*\""); // String literals
@@ -96,7 +97,7 @@ std::vector<Token> tokenize(const std::string& code) {
         // Determine token type
         if (std::regex_match(word, preprocessorRegex)) {
             token.type = "Preprocessor";
-        } else if (std::regex_match(word, keywordRegex)) {
+        } else if (isKeyword(word)) {
             token.type = "Keyword";
         } else if (std::regex_match(word, identifierRegex)) {
             token.type = "Identifier";
@@ -160,3 +161,18 @@ void printTokens(const std::vector<Token>& tokens) {
     }
 }
 
+bool isKeyword(const std::string word) {
+    std::vector<std::string> keywords {"alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexecpt",
+    "auto", "bitand", "bitor", "bool", "break", "case", "catch", "char", "char8_t", "char16_t", "char32_t", "class",
+    "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue", "co_await", "co_return", 
+    "co_yield", "decltype", "default", "delete", "do", "double", "dynamic_cast", "else", "enum", "explicit", "export", "extern",
+    "falst", "float", "for", "friend", "goto", "if", "inline", "int", "long", "mutable", "namespace", "new", "noexcept", "not",
+    "not_eq", "nullptr", "operator", "or", "or_eq", "private", "protected", "public", "reflexpr", "register", "reinterpret_cast",
+    "requires", "return", "short", "signed", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized",
+    "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename", "union", "unsigned", "using",
+    "virtual", "void", "volatile", "wchar_t", "while", "xor", "xor_eq"};
+
+    if (std::find(keywords.begin(), keywords.end(), word) != keywords.end()) {
+        return true;
+    } else return false;
+};
