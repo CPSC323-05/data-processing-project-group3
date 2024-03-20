@@ -170,7 +170,7 @@ bool isKeyword(const std::string word) {
     "not_eq", "nullptr", "operator", "or", "or_eq", "private", "protected", "public", "reflexpr", "register", "reinterpret_cast",
     "requires", "return", "short", "signed", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized",
     "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename", "union", "unsigned", "using",
-    "virtual", "void", "volatile", "wchar_t", "while", "xor", "xor_eq"};
+    "virtual", "void", "volatile", "wchar_t", "while", "xor", "xor_eq", "#include"};
 
     if (std::find(keywords.begin(), keywords.end(), word) != keywords.end()) {
         return true;
