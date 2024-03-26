@@ -14,7 +14,8 @@
 struct Token;
 void readFile(std::vector<std::string>& lines, const std::string& filePath);
 std::string removeCommentsAndExcessSpaces(const std::string& line);
-std::vector<Token> tokenize(const std::string& code);
+std::vector<Token> parseLine(const std::string& code);
+std::vector<Token> tokenizeChunk(const std::string& code);
 void printCode(const std::vector<std::string>& lines);
 void printTokens(const std::vector<Token>& tokens);
 bool isKeyword(const std::string word);
@@ -35,7 +36,7 @@ int main() {
     // Process each line to remove comments/excess spaces and tokenize
     for (auto& line : lines) {
         line = removeCommentsAndExcessSpaces(line);
-        std::vector<Token> tokens = tokenize(line);
+        std::vector<Token> tokens = parseLine(line);
         allTokens.insert(allTokens.end(), tokens.begin(), tokens.end());
     }
 
@@ -77,45 +78,63 @@ std::string removeCommentsAndExcessSpaces(const std::string& line) {
 }
 
 // Enhanced tokenize function with refined matching
-std::vector<Token> tokenize(const std::string& code) {
+std::vector<Token> parseLine(const std::string& code) {
     std::vector<Token> tokens;
-
-    // Adjusted regular expressions
-    // std::regex keywordRegex("\\b(int|return|if|else|for)\\b");
-    std::regex identifierRegex("\\b[a-zA-Z_][a-zA-Z0-9_]*\\b");
-    std::regex literalRegex("\\b\\d+\\b"); // Numeric literals
-    std::regex stringLiteralRegex("\"[^\"]*\""); // String literals
-    std::regex operatorRegex("([&*+=\\-/<>!]{1,2}|[;{}(),\\[\\]]|<<|>>)");
-    std::regex preprocessorRegex("#include[ ]*<[^>]+>|#include[ ]*\"[^\"]+\"|using namespace std;");
 
     // Tokenization logic using updated regex
     std::istringstream stream(code);
     std::string word;
     while (stream >> word) {
-        Token token;
-        token.value = word;
-        // Determine token type
-        if (std::regex_match(word, preprocessorRegex)) {
-            token.type = "Preprocessor";
-        } else if (isKeyword(word)) {
-            token.type = "Keyword";
-        } else if (std::regex_match(word, identifierRegex)) {
-            token.type = "Identifier";
-        } else if (std::regex_match(word, literalRegex)) {
-            token.type = "Literal";
-        } else if (std::regex_match(word, stringLiteralRegex)) {
-            token.type = "String Literal";
-        } else if (std::regex_match(word, operatorRegex)) {
-            token.type = "Operator/Delimiter";
-        } else {
-            token.type = "Unknown";
+        std::vector<Token> tokensFromChunk = tokenize(word);
+        for (auto t : tokensFromChunk) {
+            tokens.push_back(t);
         }
-        tokens.push_back(token);
     }
-
     return tokens;
 }
 
+std::vector<Token> tokenizeChunk(const std::string& code) {
+    std::vector<Token> tokens;
+
+    // Adjusted regular expressions
+    std::regex identifierRegex("\\b[a-zA-Z_][a-zA-Z0-9_]*\\b");
+    std::regex literalRegex("\\b\\d+\\b"); // Numeric literals
+    std::regex stringLiteralRegex("\"[^\"]*\""); // String literals
+    std::regex operatorRegex("([&*+=\\-/<>!]{1,2}|[;{}(),\\[\\]]|<<|>>)");
+    std::regex preprocessorRegex("#include[ ]*<[^>]+>|#include[ ]*\"[^\"]+\"|using namespace std;");
+    
+    std::string delimiters = "{};()[]:";
+    std::vector<Token> individualTokens;
+    std::vector<int> delimitersIndices;
+    for (int i = 0; i < code.length(); i++) {
+        if (delimiters.find(code[i]) != std::string::npos) { // if this char is a delimiter
+            delimitersIndices.push_back(i);
+        }
+    }
+    // TODO: separate the chunk
+    // EX: compute_sum(a,2);
+    // compute_sum -> identifier
+    // ( is delimiter
+    // ... and so on
+
+    token.value = word;
+    // Determine token type
+    if (std::regex_match(word, preprocessorRegex)) {
+        token.type = "Preprocessor";
+    } else if (isKeyword(word)) {
+        token.type = "Keyword";
+    } else if (std::regex_match(word, identifierRegex)) {
+        token.type = "Identifier";
+    } else if (std::regex_match(word, literalRegex)) {
+        token.type = "Literal";
+    } else if (std::regex_match(word, stringLiteralRegex)) {
+        token.type = "String Literal";
+    } else if (std::regex_match(word, operatorRegex)) {
+        token.type = "Operator/Delimiter";
+    } else {
+        token.type = "Unknown";
+    }
+}
 
 // Prints the processed code without comments and excess spaces
 void printCode(const std::vector<std::string>& lines) {
@@ -170,7 +189,7 @@ bool isKeyword(const std::string word) {
     "not_eq", "nullptr", "operator", "or", "or_eq", "private", "protected", "public", "reflexpr", "register", "reinterpret_cast",
     "requires", "return", "short", "signed", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized",
     "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename", "union", "unsigned", "using",
-    "virtual", "void", "volatile", "wchar_t", "while", "xor", "xor_eq", "#include"};
+    "virtual", "void", "volatile", "wchar_t", "while", "xor", "xor_eq"};
 
     if (std::find(keywords.begin(), keywords.end(), word) != keywords.end()) {
         return true;
