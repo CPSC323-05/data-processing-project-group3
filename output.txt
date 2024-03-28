@@ -1,0 +1,12 @@
+#include <iostream>
+using namespace std;
+int calculate_sum(int a, int b) {
+return a + b;
+}
+int main() {
+int num1 = 10;
+int num2 = 20;
+int result = calculate_sum(num1, num2);
+cout << "Sum: " << result << endl;
+return 0;
+}

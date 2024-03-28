@@ -1,197 +1,161 @@
-// Includes necessary libraries for file handling, string manipulation, and data structures
-#include <iostream>
 #include <fstream>
-#include <sstream>
-#include <vector>
-#include <algorithm>
+#include <iostream>
 #include <string>
-#include <set>
-#include <regex>
-#include <cctype>
+#include <algorithm>
+#include <vector>
 #include <iomanip>
+#include <set>
 
-// Forward declarations of functions and struct
-struct Token;
-void readFile(std::vector<std::string>& lines, const std::string& filePath);
-std::string removeCommentsAndExcessSpaces(const std::string& line);
-std::vector<Token> parseLine(const std::string& code);
-std::vector<Token> tokenizeChunk(const std::string& code);
-void printCode(const std::vector<std::string>& lines);
-void printTokens(const std::vector<Token>& tokens);
-bool isKeyword(const std::string word);
+// This function removes leading and trailing whitespace from a string
+std::string trim(const std::string& str) {
+    size_t first = str.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos)
+        return "";
+    size_t last = str.find_last_not_of(" \t\r\n");
+    return str.substr(first, (last - first + 1));
+}
 
-// Token struct to hold the value and type of each token
-struct Token {
-    std::string value;
-    std::string type;  // e.g., identifier, keyword, literal
-};
+// Function to check if a character is an alphabet letter
+bool isAlpha(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
 
-// Main function: Orchestrates file reading, processing, and output
-int main() {
-    std::vector<std::string> lines;  // Stores lines read from the file
-    std::string filePath = "input.txt";  // File path to read from
-    readFile(lines, filePath);  // Reads the file content into lines
+// Function to check if a character is a digit
+bool isDigit(char c) {
+    return c >= '0' && c <= '9';
+}
 
-    std::vector<Token> allTokens;  // Stores all tokens identified in the file
-    // Process each line to remove comments/excess spaces and tokenize
-    for (auto& line : lines) {
-        line = removeCommentsAndExcessSpaces(line);
-        std::vector<Token> tokens = parseLine(line);
-        allTokens.insert(allTokens.end(), tokens.begin(), tokens.end());
+// Function to check if a character is an operator
+bool isOperator(char c) {
+    return (c == '+' || c == '-' || c == '*' || c == '/' || c == '=' || c == '%');
+}
+
+// Function to check if a character is a delimiter
+bool isDelimiter(char c) {
+    return (c == ' ' || c == ',' || c == ';' || c == '(' || c == ')' || c == '{' || c == '}' || c == '[' || c == ']');
+}
+
+// Function for processing the file, removing comments and excess whitespace, including empty lines
+void processFile(const std::string& inputFile, const std::string& outputFile) {
+    std::ifstream input(inputFile);
+    std::ofstream output(outputFile);
+    std::string line;
+
+    while (getline(input, line)) {
+        std::string trimmedLine = trim(line); // Remove leading and trailing whitespace
+        size_t commentIndex = trimmedLine.find("//");
+        if (commentIndex != std::string::npos) {
+            trimmedLine = trim(trimmedLine.substr(0, commentIndex)); // Remove comments and trailing whitespace after comments
+        }
+        if (!trimmedLine.empty()) { // Check if line still has content after trimming
+            output << trimmedLine << std::endl; // Write to output file if line is not empty
+        }
+    }
+}
+
+// Function to tokenize and print output
+void tokenize(const std::string& code) {
+    std::set<std::string> keywords = {"int", "return", "using", "namespace"};
+    std::vector<char> operators = {'=', '+', '*', '/', '=', '%'};
+    std::vector<char> delimiters = {'(', ')', ':', ',', '{', '}', ';', '[', ']'};
+    
+    std::set<std::string> uniqueKeywords;
+    std::set<std::string> uniqueIdentifiers;
+    std::set<std::string> uniqueLiterals;
+    std::set<char> uniqueOperators;
+    std::set<char> uniqueDelimiters;
+
+    std::string currentToken;
+    bool isStringLiteral = false;
+
+    auto commitToken = [&](char c = '\0') {
+        if (!currentToken.empty()) {
+            if (keywords.find(currentToken) != keywords.end()) {
+                uniqueKeywords.insert(currentToken);
+            } else if (std::isdigit(currentToken[0])) {
+                uniqueLiterals.insert(currentToken);
+            } else {
+                uniqueIdentifiers.insert(currentToken);
+            }
+            currentToken.clear();
+        }
+        if (c != '\0') {
+            currentToken += c;
+        }
+    };
+
+    for (size_t i = 0; i < code.size(); ++i) {
+        char c = code[i];
+
+        if (c == '\"') {
+            isStringLiteral = !isStringLiteral;
+            currentToken += c;
+            if (!isStringLiteral) {
+                uniqueIdentifiers.insert(currentToken); // Treat string literals as identifiers
+                currentToken.clear();
+            }
+        } else if (isStringLiteral) {
+            currentToken += c;
+        } else if (std::find(operators.begin(), operators.end(), c) != operators.end()) {
+            commitToken();
+            uniqueOperators.insert(c);
+        } else if (std::find(delimiters.begin(), delimiters.end(), c) != delimiters.end()) {
+            commitToken();
+            uniqueDelimiters.insert(c);
+        } else if (std::isspace(c)) {
+            commitToken();
+        } else {
+            currentToken += c;
+        }
+    }
+    commitToken(); // Commit any remaining token
+    // Output section
+    std::cout << "  -----------------------------------------------------------------------" << std::endl;
+    std::cout << "  Lexeme                              Token" << std::endl;
+    std::cout << "  ----------------------------------- -----------------------------------" << std::endl;
+    
+    for (const auto& kw : uniqueKeywords) {
+        std::cout << "  " << std::setw(36) << std::left << kw << "Keyword" << std::endl;
+    }
+    for (const auto& id : uniqueIdentifiers) {
+        std::cout << "  " << std::setw(36) << std::left << id << "Identifier" << std::endl;
+    }
+    for (const auto& lit : uniqueLiterals) {
+        std::cout << "  " << std::setw(36) << std::left << lit << "Literal" << std::endl;
+    }
+    for (const auto& op : uniqueOperators) {
+        std::cout << "  " << std::setw(36) << std::left << std::string(1, op) << "Operator" << std::endl;
+    }
+    for (const auto& delim : uniqueDelimiters) {
+        std::cout << "  " << std::setw(36) << std::left << std::string(1, delim) << "Delimiter" << std::endl;
     }
 
-    printCode(lines);  // Prints processed code
-    printTokens(allTokens);  // Prints tokens in tabular form
+    std::cout << "  -----------------------------------------------------------------------" << std::endl;
+}
+
+
+int main() {
+    std::string inputFilename = "input.txt";
+    std::string outputFilename = "output.txt";
+
+    // Process the file: remove excess spaces and comments
+    processFile(inputFilename, outputFilename);
+
+    // Display code after removing comments and excess spaces
+    std::cout << "Output1 - Code after removing excess space and comments:" << std::endl;
+    std::ifstream input(outputFilename);
+    std::string line;
+    while (getline(input, line)) {
+        std::cout << line << std::endl;
+    }
+    input.close();
+
+    // Display tokenized code in a tabular format
+    std::cout << std::endl << "Output2 - Tokenized code in tabular form:" << std::endl;
+    input.open(outputFilename);
+    std::string code((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    input.close();
+    tokenize(code);
 
     return 0;
 }
-
-// Reads all lines from a file into a vector
-void readFile(std::vector<std::string>& lines, const std::string& filePath) {
-    std::ifstream file(filePath);  // Opens the file
-    std::string line;
-    
-    // Reads each line and adds to the vector
-    while (std::getline(file, line)) {
-        lines.push_back(line);
-    }
-}
-
-// Removes comments and excess spaces from a line of code
-std::string removeCommentsAndExcessSpaces(const std::string& line) {
-    std::string result;  // Holds the cleaned line
-    std::istringstream stream(line);  // Stream to parse the line word by word
-    std::string word;
-
-    // Reads each word, stopping if a comment start is found
-    while (stream >> word) {
-        if (word.find("//") != std::string::npos) {
-            break;  // Ignores the rest of the line if comment is found
-        }
-        if (!result.empty()) {
-            result += " ";  // Adds a space before the next word
-        }
-        result += word;
-    }
-
-    return result;  // Returns the cleaned line
-}
-
-// Enhanced tokenize function with refined matching
-std::vector<Token> parseLine(const std::string& code) {
-    std::vector<Token> tokens;
-
-    // Tokenization logic using updated regex
-    std::istringstream stream(code);
-    std::string word;
-    while (stream >> word) {
-        std::vector<Token> tokensFromChunk = tokenize(word);
-        for (auto t : tokensFromChunk) {
-            tokens.push_back(t);
-        }
-    }
-    return tokens;
-}
-
-std::vector<Token> tokenizeChunk(const std::string& code) {
-    std::vector<Token> tokens;
-
-    // Adjusted regular expressions
-    std::regex identifierRegex("\\b[a-zA-Z_][a-zA-Z0-9_]*\\b");
-    std::regex literalRegex("\\b\\d+\\b"); // Numeric literals
-    std::regex stringLiteralRegex("\"[^\"]*\""); // String literals
-    std::regex operatorRegex("([&*+=\\-/<>!]{1,2}|[;{}(),\\[\\]]|<<|>>)");
-    std::regex preprocessorRegex("#include[ ]*<[^>]+>|#include[ ]*\"[^\"]+\"|using namespace std;");
-    
-    std::string delimiters = "{};()[]:";
-    std::vector<Token> individualTokens;
-    std::vector<int> delimitersIndices;
-    for (int i = 0; i < code.length(); i++) {
-        if (delimiters.find(code[i]) != std::string::npos) { // if this char is a delimiter
-            delimitersIndices.push_back(i);
-        }
-    }
-    // TODO: separate the chunk
-    // EX: compute_sum(a,2);
-    // compute_sum -> identifier
-    // ( is delimiter
-    // ... and so on
-
-    token.value = word;
-    // Determine token type
-    if (std::regex_match(word, preprocessorRegex)) {
-        token.type = "Preprocessor";
-    } else if (isKeyword(word)) {
-        token.type = "Keyword";
-    } else if (std::regex_match(word, identifierRegex)) {
-        token.type = "Identifier";
-    } else if (std::regex_match(word, literalRegex)) {
-        token.type = "Literal";
-    } else if (std::regex_match(word, stringLiteralRegex)) {
-        token.type = "String Literal";
-    } else if (std::regex_match(word, operatorRegex)) {
-        token.type = "Operator/Delimiter";
-    } else {
-        token.type = "Unknown";
-    }
-}
-
-// Prints the processed code without comments and excess spaces
-void printCode(const std::vector<std::string>& lines) {
-    for (const auto& line : lines) {
-        std::cout << line << std::endl;
-    }
-}
-
-// Helper function to get the maximum token length in each category
-int getMaxTokenLength(const std::vector<std::string>& tokens) {
-    int max_length = 0;
-    for (const auto& token : tokens) {
-        max_length = std::max(max_length, static_cast<int>(token.length()));
-    }
-    return max_length;
-}
-
-// Modified printTokens function to format like a table
-void printTokens(const std::vector<Token>& tokens) {
-    // Create a map to hold tokens by type
-    std::map<std::string, std::vector<std::string>> categorizedTokens;
-    for (const auto& token : tokens) {
-        categorizedTokens[token.type].push_back(token.value);
-    }
-
-    // Calculate padding for each category
-    std::map<std::string, int> categoryPadding;
-    for (const auto& category : categorizedTokens) {
-        categoryPadding[category.first] = getMaxTokenLength(category.second);
-    }
-
-    // Print the table header
-    std::cout << std::left << std::setw(20) << "Category" << "Tokens\n";
-    std::cout << "------------------------------------------------------------\n";
-
-    // Print tokens categorized by type with proper padding
-    for (const auto& category : categorizedTokens) {
-        std::cout << std::left << std::setw(20) << category.first; // Print the category name
-        for (const auto& token : category.second) {
-            std::cout << std::left << token << ", ";
-        }
-        std::cout << std::endl; // End of category line
-    }
-}
-
-bool isKeyword(const std::string word) {
-    std::vector<std::string> keywords {"alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexecpt",
-    "auto", "bitand", "bitor", "bool", "break", "case", "catch", "char", "char8_t", "char16_t", "char32_t", "class",
-    "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue", "co_await", "co_return", 
-    "co_yield", "decltype", "default", "delete", "do", "double", "dynamic_cast", "else", "enum", "explicit", "export", "extern",
-    "falst", "float", "for", "friend", "goto", "if", "inline", "int", "long", "mutable", "namespace", "new", "noexcept", "not",
-    "not_eq", "nullptr", "operator", "or", "or_eq", "private", "protected", "public", "reflexpr", "register", "reinterpret_cast",
-    "requires", "return", "short", "signed", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized",
-    "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename", "union", "unsigned", "using",
-    "virtual", "void", "volatile", "wchar_t", "while", "xor", "xor_eq"};
-
-    if (std::find(keywords.begin(), keywords.end(), word) != keywords.end()) {
-        return true;
-    } else return false;
-};
